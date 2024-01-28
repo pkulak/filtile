@@ -2,38 +2,32 @@ mod config;
 mod parse;
 mod tile;
 
-use config::Config;
-use parse::{parse_command, Command, Operation};
+use config::{Config, ConfigStorage};
+use parse::{parse_command, parse_output, parse_tags, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
-use std::{collections::HashMap, convert::Infallible};
+use std::convert::Infallible;
 use tile::{LeftPrimary, PaddedPrimary, Params, RightPrimary, Tile, TileType};
 
 fn main() {
     let layout = FilTile {
         tag_log: TagLog::new(),
-        configs: HashMap::new(),
-        default_config: Config::new(),
+        configs: ConfigStorage::new(Config::new()),
     };
     run(layout).unwrap();
 }
 
 struct FilTile {
     tag_log: TagLog,
-    configs: HashMap<u32, Config>,
-    default_config: Config,
+    configs: ConfigStorage,
 }
 
 impl FilTile {
-    fn get_config(&self) -> &Config {
-        if let Some(c) = self.configs.get(&self.tag_log.last_tag) {
-            c
-        } else {
-            &self.default_config
-        }
+    fn get_config(&self, tags: u32, output: &str) -> &Config {
+        self.configs.retrieve(tags, output)
     }
 
-    fn set_config(&mut self, config: Config) {
-        self.configs.insert(self.tag_log.last_tag, config);
+    fn set_config(&mut self, tags: u32, output: &str, config: Config) {
+        self.configs.store(tags, output, config);
     }
 }
 
@@ -46,13 +40,23 @@ impl Layout for FilTile {
         &mut self,
         cmd: String,
         tags: Option<u32>,
-        _output: &str,
+        output: &str,
     ) -> Result<(), Self::Error> {
         if let Some(t) = tags {
             self.tag_log.record_tags(t);
         }
 
-        let mut config = self.get_config().clone();
+        let tags = match parse_tags(&cmd) {
+            Some(t) => t,
+            None => self.tag_log.last_tag,
+        };
+
+        let output = match parse_output(&cmd) {
+            Some(o) => o,
+            None => output,
+        };
+
+        let mut config = self.get_config(tags, output).clone();
 
         match parse_command(&cmd) {
             Command::Single("swap") => {
@@ -65,6 +69,22 @@ impl Layout for FilTile {
             Command::Single("pad") => {
                 config.pad = !config.pad;
             }
+            Command::Textual {
+                namespace: "main-location",
+                value: "left",
+            } => config.tile = TileType::LeftPrimary,
+            Command::Textual {
+                namespace: "main-location",
+                value: "right",
+            } => config.tile = TileType::RightPrimary,
+            Command::Textual {
+                namespace: "pad",
+                value: "on",
+            } => config.pad = true,
+            Command::Textual {
+                namespace: "pad",
+                value: "off",
+            } => config.pad = false,
             Command::Numeric {
                 namespace: "view-padding",
                 operation,
@@ -95,7 +115,7 @@ impl Layout for FilTile {
             _ => println!("invalid command {}", cmd),
         }
 
-        self.set_config(config);
+        self.set_config(tags, output, config);
 
         Ok(())
     }
@@ -106,11 +126,11 @@ impl Layout for FilTile {
         usable_width: u32,
         usable_height: u32,
         tags: u32,
-        _output: &str,
+        output: &str,
     ) -> Result<GeneratedLayout, Self::Error> {
         self.tag_log.record_tags(tags);
 
-        let config = self.get_config();
+        let config = self.get_config(self.tag_log.last_tag, output);
 
         let params = Params {
             view_count,

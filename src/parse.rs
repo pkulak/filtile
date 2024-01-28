@@ -7,6 +7,10 @@ pub enum Command<'a> {
         operation: Operation,
         value: u32,
     },
+    Textual {
+        namespace: &'a str,
+        value: &'a str,
+    },
 }
 
 #[derive(PartialEq, Debug)]
@@ -16,8 +20,23 @@ pub enum Operation {
     Set,
 }
 
+pub fn parse_output(cmd: &str) -> Option<&str> {
+    find_option("--output", cmd)
+}
+
+pub fn parse_tags(cmd: &str) -> Option<u32> {
+    let tags = find_option("--tags", cmd);
+
+    match tags {
+        Some("all") => Some(0),
+        Some(i) => i.parse::<u32>().ok(),
+        _ => Option::None,
+    }
+}
+
 pub fn parse_command(cmd: &str) -> Command {
     let parts: Vec<&str> = cmd.split(' ').collect();
+    let parts = remove_options(&parts);
 
     if parts.len() == 1 {
         return Command::Single(parts[0]);
@@ -39,7 +58,7 @@ pub fn parse_command(cmd: &str) -> Command {
 
         let value: u32 = match value.parse() {
             Ok(v) => v,
-            Err(_) => return Command::Invalid,
+            Err(_) => return Command::Textual { namespace, value },
         };
 
         return Command::Numeric {
@@ -52,15 +71,47 @@ pub fn parse_command(cmd: &str) -> Command {
     Command::Invalid
 }
 
+fn find_option<'a>(option: &'a str, cmd: &'a str) -> Option<&'a str> {
+    let parts: Vec<&str> = cmd.split(' ').collect();
+
+    if let Some(i) = parts.iter().position(|s| *s == option) {
+        if let Some(next) = parts.get(i + 1) {
+            return Some(next);
+        }
+    }
+
+    Option::None
+}
+
+fn remove_options<'a>(parts: &[&'a str]) -> Vec<&'a str> {
+    let mut ret: Vec<&str> = Vec::new();
+    let mut remove_next = false;
+
+    for item in parts.iter() {
+        if item.starts_with("--") {
+            remove_next = true;
+        } else if remove_next {
+            remove_next = false;
+        } else {
+            ret.push(item);
+        }
+    }
+
+    ret
+}
+
 #[cfg(test)]
 mod tests {
     use crate::parse::{Command, Operation};
 
-    use super::parse_command;
+    use super::{parse_command, parse_output, parse_tags};
 
     #[test]
     fn it_parses_invalid_commands() {
-        assert_eq!(Command::Invalid, parse_command("free-ice-cream +32.8"));
+        assert_eq!(
+            Command::Invalid,
+            parse_command("free-ice-cream for you and me")
+        );
     }
 
     #[test]
@@ -69,6 +120,32 @@ mod tests {
             Command::Single(v) => assert_eq!("swap", v),
             _ => panic!("parser fail"),
         };
+    }
+
+    #[test]
+    fn it_ignores_options() {
+        match parse_command("--output HD1 swap --tags 1") {
+            Command::Single(v) => assert_eq!("swap", v),
+            _ => panic!("parser fail"),
+        };
+    }
+
+    #[test]
+    fn it_parses_options() {
+        match parse_output("--output HD1 swap") {
+            Some(o) => assert_eq!("HD1", o),
+            _ => panic!("parser fail"),
+        }
+
+        match parse_tags("swap --tags all") {
+            Some(t) => assert_eq!(0, t),
+            _ => panic!("parser fail"),
+        }
+
+        match parse_tags("swap --tags 32") {
+            Some(t) => assert_eq!(32, t),
+            _ => panic!("parser fail"),
+        }
     }
 
     #[test]
@@ -108,6 +185,20 @@ mod tests {
                 assert_eq!("main-ratio", ns);
                 assert_eq!(Operation::Set, op);
                 assert_eq!(75, v);
+            }
+            _ => panic!("parser fail"),
+        };
+    }
+
+    #[test]
+    fn it_parses_textual_commands() {
+        match parse_command("main-location left") {
+            Command::Textual {
+                namespace: ns,
+                value: v,
+            } => {
+                assert_eq!("main-location", ns);
+                assert_eq!("left", v);
             }
             _ => panic!("parser fail"),
         };

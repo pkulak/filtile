@@ -82,3 +82,88 @@ impl Config {
         self.ratio = Config::ranged_set(value, 10, 90);
     }
 }
+
+// Is it a bit silly to do this instead of throwing them in a map and calling
+// it a day? Yup! But, in my defense, storing complex objects in a map causes
+// all kinds of issues that this avoids.
+pub struct ConfigStorage {
+    tag_list: Vec<ConfigEntry>,
+    default: Config,
+}
+
+struct ConfigEntry {
+    tags: u32,
+    output: String,
+    config: Config,
+}
+
+impl ConfigEntry {
+    fn matches_exact(&self, tags: u32, output: &str) -> bool {
+        self.tags == tags && self.output == output
+    }
+
+    fn matches_output(&self, output: &str) -> bool {
+        self.output == output && self.tags == 0
+    }
+
+    fn matches_tags(&self, tags: u32) -> bool {
+        self.tags == tags && self.output == "all"
+    }
+
+    fn matches_any(&self) -> bool {
+        self.output == "all" && self.tags == 0
+    }
+}
+
+impl ConfigStorage {
+    pub fn new(default: Config) -> ConfigStorage {
+        ConfigStorage {
+            tag_list: Vec::new(),
+            default,
+        }
+    }
+
+    pub fn retrieve(&self, tags: u32, output: &str) -> &Config {
+        // narrow it down
+        let filtered: Vec<&ConfigEntry> = self
+            .tag_list
+            .iter()
+            .filter(|e| {
+                e.matches_exact(tags, output)
+                    || e.matches_output(output)
+                    || e.matches_tags(tags)
+                    || e.matches_any()
+            })
+            .collect();
+
+        if let Some(entry) = filtered.iter().find(|e| e.matches_exact(tags, output)) {
+            return &entry.config;
+        }
+
+        if let Some(entry) = filtered.iter().find(|e| e.matches_output(output)) {
+            return &entry.config;
+        }
+
+        if let Some(entry) = filtered.iter().find(|e| e.matches_tags(tags)) {
+            return &entry.config;
+        }
+
+        if let Some(entry) = filtered.iter().find(|e| e.matches_any()) {
+            return &entry.config;
+        }
+
+        &self.default
+    }
+
+    pub fn store(&mut self, tags: u32, output: &str, config: Config) {
+        // remove if exists
+        self.tag_list.retain(|e| !e.matches_exact(tags, output));
+
+        // and store it
+        self.tag_list.push(ConfigEntry {
+            tags,
+            output: output.to_string(),
+            config,
+        });
+    }
+}

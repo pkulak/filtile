@@ -1,6 +1,6 @@
 # Filtile
 
-This is a layout manager for the [https://github.com/riverwm/river](River) window
+This is a layout manager for the [River](https://github.com/riverwm/river) window
 manager. It's basically `rivertile`, but with a few things not implimented (because
 I don't use them), and configuration per tag.
 
@@ -9,7 +9,7 @@ I don't use them), and configuration per tag.
 All numbers will set the value, but also support a prefix of either `+` or `-`
 for adjustment.
 
-Folling are the commands that can be sent to `riverctl send-layout-cmd filtile ...`:
+Following are the commands that can be sent to `riverctl send-layout-cmd filtile ...`:
 
 <dl>
     <dt>view-padding [pixels]</dt>
@@ -21,11 +21,52 @@ Folling are the commands that can be sent to `riverctl send-layout-cmd filtile .
         ratio must be between 10 and 90, inclusive.</dd>
     <dt>swap<dt>
     <dd>Swap the main area to the other side of the layout.</dd>
+    <dt>main-location [left | right]<dt>
+    <dd>Set the location of the main area in the layout. </dd>
     <dt>pad</dt>
     <dd>Toggle single view padding. When only one view is in the layout, it
         will be centered and given as much width as it would have if there
-        were more windows.</dd>
+        were more windows. Also supports sending "on" or "off" to not
+        toggle.</dd>
 </dl>
+
+All commands can be prefaced with one or both of the following options. It's
+recommended to send both at the same time. Either can be "all". Both set to
+"all" changes the default. Make sure to put more general commands first and
+they will be picked up by the commands that follow.
+
+<dl>
+    <dt>--output</dt>
+    <dd>The output "monitor" to apply this setting to.</dd>
+    <dt>--tags</dt>
+    <dd>The tags to apply this setting to.</dd>
+</dl>
+
+## Examples
+
+```bash
+# Super+H and Super+L to decrease/increase the main ratio of filtile
+riverctl map normal Super H send-layout-cmd filtile "main-ratio -5"
+riverctl map normal Super L send-layout-cmd filtile "main-ratio +5"
+
+riverctl map normal Super Z send-layout-cmd filtile "swap"
+riverctl map normal Super C send-layout-cmd filtile "pad"
+
+# Set the default layout generator to be filtile and start it.
+# River will send the process group of the init executable SIGTERM on exit.
+riverctl default-layout filtile
+filtile &
+
+# Send config to the layout generator. Notice that we have to create a
+# sub-process that sleeps before doing anything, to allow the process to
+# start. This is... unfortunate. I'll probably move this into a config file
+# or as params during startup shortly.
+( sleep 1 && \
+    riverctl send-layout-cmd filtile "--tags all --output all pad on" && \
+    riverctl send-layout-cmd filtile "--tags $((1 << 4)) --output all main-ratio 70" && \
+    riverctl send-layout-cmd filtile "--tags $((1 << 4)) --output all main-location right" ) &
+
+```
 
 ## Installation
 
