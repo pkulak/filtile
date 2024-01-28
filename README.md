@@ -26,3 +26,42 @@ Folling are the commands that can be sent to `riverctl send-layout-cmd filtile .
         will be centered and given as much width as it would have if there
         were more windows.</dd>
 </dl>
+
+## Installation
+
+You can install from source by cloning the repo and running:
+
+    cargo install
+
+Or, if you run NixOS, you can do something like the following:
+
+```nix
+{
+  inputs = {
+    filtile.url = "github:pkulak/filtile";
+  };
+  outputs =
+    inputs@{ self
+    , nixpkgs-unstable
+    , ...
+    }:
+    let
+      overlays = {
+        unstable = _: prev: {
+          unstable = import nixpkgs-unstable
+            {
+              inherit (prev.stdenv) system;
+            } // {
+            filtile = inputs.filtile.packages.${prev.stdenv.system}.filtile;
+          };
+        };
+      };
+    in
+    {
+      <snip>;
+      packages = with pkgs; [
+        unstable.filtile
+      ];
+    }
+}
+```
