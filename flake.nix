@@ -38,8 +38,7 @@
         # `nix develop`
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs;
-            sharedDeps ++ [ bacon openssl ];
+            sharedDeps ++ [ bacon clippy rustfmt rust-analyzer ];
         };
-
       });
 }
