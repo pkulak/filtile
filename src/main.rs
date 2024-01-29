@@ -18,7 +18,9 @@ fn main() {
     let call_string = all_args[1..].join(" ");
 
     for cmd in call_string.split(',') {
-        let _ = layout.user_cmd(cmd.trim().to_string(), Some(0), "all");
+        if cmd.trim().len() > 0 {
+            let _ = layout.user_cmd(cmd.trim().to_string(), Some(0), "all");
+        }
     }
 
     run(layout).unwrap();

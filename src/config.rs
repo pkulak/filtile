@@ -170,7 +170,7 @@ impl ConfigStorage {
                 } else if output == ALL {
                     e.tags == tags
                 } else {
-                    e.output == output && e.tags == tags
+                    false
                 }
             })
             .collect();
