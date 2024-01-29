@@ -5,14 +5,22 @@ mod tile;
 use config::{Config, ConfigStorage};
 use parse::{parse_command, parse_output, parse_tags, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
-use std::convert::Infallible;
+use std::{convert::Infallible, env, iter};
 use tile::{LeftPrimary, PaddedPrimary, Params, RightPrimary, Tile, TileType};
 
 fn main() {
-    let layout = FilTile {
+    let mut layout = FilTile {
         tag_log: TagLog::new(),
         configs: ConfigStorage::new(Config::new()),
     };
+
+    let all_args: Vec<String> = env::args().collect();
+    let call_string = all_args[1..].join(" ");
+
+    for cmd in call_string.split(',') {
+        let _ = layout.user_cmd(cmd.trim().to_string(), Some(0), "all");
+    }
+
     run(layout).unwrap();
 }
 
@@ -176,7 +184,7 @@ impl TagLog {
     pub fn new() -> TagLog {
         TagLog {
             last_tag: 0,
-            single_tags: (0..31).map(|i| 1 << i).collect(),
+            single_tags: (0..31).map(|i| 1 << i).chain(iter::once(0)).collect(),
         }
     }
 

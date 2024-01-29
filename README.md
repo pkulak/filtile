@@ -40,6 +40,9 @@ can be "all". Both set to "all" changes the default.
     <dd>The tags to apply this setting to.</dd>
 </dl>
 
+Commands can also be send to the executable on startup, separated by commas,
+as shown below.
+
 ## Examples
 
 ```bash
@@ -53,17 +56,10 @@ riverctl map normal Super C send-layout-cmd filtile "pad"
 # Set the default layout generator to be filtile and start it.
 # River will send the process group of the init executable SIGTERM on exit.
 riverctl default-layout filtile
-filtile &
 
-# Send config to the layout generator. Notice that we have to create a
-# sub-process that sleeps before doing anything, to allow the process to
-# start. This is... unfortunate. I'll probably move this into a config file
-# or as params during startup shortly.
-( sleep 1 && \
-    riverctl send-layout-cmd filtile "--tags all --output all pad on" && \
-    riverctl send-layout-cmd filtile "--tags $((1 << 4)) --output all main-ratio 70" && \
-    riverctl send-layout-cmd filtile "--tags $((1 << 4)) --output all main-location right" ) &
-
+filtile pad on, \
+    --tags $((1 << 4)) main-ratio 70, \
+    --tags $((1 << 4)) main-location right &
 ```
 
 ## Installation
