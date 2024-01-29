@@ -40,7 +40,7 @@ can be "all". Both set to "all" changes the default.
     <dd>The tags to apply this setting to.</dd>
 </dl>
 
-Commands can also be send to the executable on startup, separated by commas,
+Commands can also be sent to the executable on startup, separated by commas,
 as shown below.
 
 ## Examples
