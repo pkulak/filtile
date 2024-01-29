@@ -16,7 +16,7 @@ pub trait Tile {
     fn get_stack_height(&self, params: &Params, index: u32) -> u32;
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum TileType {
     LeftPrimary,
     RightPrimary,

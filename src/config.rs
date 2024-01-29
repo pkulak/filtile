@@ -1,6 +1,6 @@
 use crate::tile::TileType;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub inner: u32,
     pub outer: u32,
@@ -83,6 +83,8 @@ impl Config {
     }
 }
 
+static ALL: &str = "all";
+
 // Is it a bit silly to do this instead of throwing them in a map and calling
 // it a day? Yup! But, in my defense, storing complex objects in a map causes
 // all kinds of issues that this avoids.
@@ -91,6 +93,7 @@ pub struct ConfigStorage {
     default: Config,
 }
 
+#[derive(Debug)]
 struct ConfigEntry {
     tags: u32,
     output: String,
@@ -107,11 +110,11 @@ impl ConfigEntry {
     }
 
     fn matches_tags(&self, tags: u32) -> bool {
-        self.tags == tags && self.output == "all"
+        self.tags == tags && self.output == ALL
     }
 
     fn matches_any(&self) -> bool {
-        self.output == "all" && self.tags == 0
+        self.output == ALL && self.tags == 0
     }
 }
 
@@ -155,7 +158,35 @@ impl ConfigStorage {
         &self.default
     }
 
-    pub fn store(&mut self, tags: u32, output: &str, config: Config) {
+    pub fn apply(&mut self, tags: u32, output: &str, f: impl Fn(&mut Config)) {
+        let filtered: Vec<&mut ConfigEntry> = self
+            .tag_list
+            .iter_mut()
+            .filter(|e| {
+                if tags == 0 && output == ALL {
+                    true
+                } else if tags == 0 {
+                    e.output == output
+                } else if output == ALL {
+                    e.tags == tags
+                } else {
+                    e.output == output && e.tags == tags
+                }
+            })
+            .collect();
+
+        // apply to everything existing
+        for entry in filtered {
+            f(&mut entry.config);
+        }
+
+        // make a whole new config and apply there as well
+        let mut config = self.retrieve(tags, output).clone();
+        f(&mut config);
+        self.store(tags, output, config);
+    }
+
+    fn store(&mut self, tags: u32, output: &str, config: Config) {
         // remove if exists
         self.tag_list.retain(|e| !e.matches_exact(tags, output));
 
@@ -165,5 +196,40 @@ impl ConfigStorage {
             output: output.to_string(),
             config,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::ALL;
+
+    use super::{Config, ConfigStorage};
+
+    #[test]
+    fn it_applies_configs() {
+        let mut storage = ConfigStorage::new(Config::new());
+
+        // apply something very specific
+        storage.apply(32, "HD-1", |c| c.ratio = 9);
+
+        assert_eq!(1, storage.tag_list.len());
+        assert_eq!(9, storage.tag_list[0].config.ratio);
+
+        // now apply for tag 32, and all outputs, which should modify our
+        // existing config
+        storage.apply(32, ALL, |c| c.inner = 42);
+
+        assert_eq!(2, storage.tag_list.len());
+        assert_eq!(9, storage.tag_list[0].config.ratio);
+        assert_eq!(42, storage.tag_list[0].config.inner);
+        assert_eq!(42, storage.tag_list[1].config.inner);
+
+        // set a new default (which will also modify everything else)
+        storage.apply(0, ALL, |c| c.ratio = 8);
+
+        assert_eq!(3, storage.tag_list.len());
+        assert_eq!(8, storage.tag_list[0].config.ratio);
+        assert_eq!(8, storage.tag_list[1].config.ratio);
+        assert_eq!(8, storage.tag_list[2].config.ratio);
     }
 }

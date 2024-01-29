@@ -21,16 +21,6 @@ struct FilTile {
     configs: ConfigStorage,
 }
 
-impl FilTile {
-    fn get_config(&self, tags: u32, output: &str) -> &Config {
-        self.configs.retrieve(tags, output)
-    }
-
-    fn set_config(&mut self, tags: u32, output: &str, config: Config) {
-        self.configs.store(tags, output, config);
-    }
-}
-
 impl Layout for FilTile {
     type Error = Infallible;
 
@@ -56,66 +46,63 @@ impl Layout for FilTile {
             None => output,
         };
 
-        let mut config = self.get_config(tags, output).clone();
-
-        match parse_command(&cmd) {
-            Command::Single("swap") => {
-                if config.tile == TileType::LeftPrimary {
-                    config.tile = TileType::RightPrimary;
-                } else {
-                    config.tile = TileType::LeftPrimary;
+        self.configs
+            .apply(tags, output, |config| match parse_command(&cmd) {
+                Command::Single("swap") => {
+                    if config.tile == TileType::LeftPrimary {
+                        config.tile = TileType::RightPrimary;
+                    } else {
+                        config.tile = TileType::LeftPrimary;
+                    }
                 }
-            }
-            Command::Single("pad") => {
-                config.pad = !config.pad;
-            }
-            Command::Textual {
-                namespace: "main-location",
-                value: "left",
-            } => config.tile = TileType::LeftPrimary,
-            Command::Textual {
-                namespace: "main-location",
-                value: "right",
-            } => config.tile = TileType::RightPrimary,
-            Command::Textual {
-                namespace: "pad",
-                value: "on",
-            } => config.pad = true,
-            Command::Textual {
-                namespace: "pad",
-                value: "off",
-            } => config.pad = false,
-            Command::Numeric {
-                namespace: "view-padding",
-                operation,
-                value,
-            } => match operation {
-                Operation::Add => config.inc_inner(value),
-                Operation::Subtract => config.dec_inner(value),
-                Operation::Set => config.set_inner(value),
-            },
-            Command::Numeric {
-                namespace: "outer-padding",
-                operation,
-                value,
-            } => match operation {
-                Operation::Add => config.inc_outer(value),
-                Operation::Subtract => config.dec_outer(value),
-                Operation::Set => config.set_outer(value),
-            },
-            Command::Numeric {
-                namespace: "main-ratio",
-                operation,
-                value,
-            } => match operation {
-                Operation::Add => config.inc_ratio(value),
-                Operation::Subtract => config.dec_ratio(value),
-                Operation::Set => config.set_ratio(value),
-            },
-            _ => println!("invalid command {}", cmd),
-        }
-
-        self.set_config(tags, output, config);
+                Command::Single("pad") => {
+                    config.pad = !config.pad;
+                }
+                Command::Textual {
+                    namespace: "main-location",
+                    value: "left",
+                } => config.tile = TileType::LeftPrimary,
+                Command::Textual {
+                    namespace: "main-location",
+                    value: "right",
+                } => config.tile = TileType::RightPrimary,
+                Command::Textual {
+                    namespace: "pad",
+                    value: "on",
+                } => config.pad = true,
+                Command::Textual {
+                    namespace: "pad",
+                    value: "off",
+                } => config.pad = false,
+                Command::Numeric {
+                    namespace: "view-padding",
+                    operation,
+                    value,
+                } => match operation {
+                    Operation::Add => config.inc_inner(value),
+                    Operation::Subtract => config.dec_inner(value),
+                    Operation::Set => config.set_inner(value),
+                },
+                Command::Numeric {
+                    namespace: "outer-padding",
+                    operation,
+                    value,
+                } => match operation {
+                    Operation::Add => config.inc_outer(value),
+                    Operation::Subtract => config.dec_outer(value),
+                    Operation::Set => config.set_outer(value),
+                },
+                Command::Numeric {
+                    namespace: "main-ratio",
+                    operation,
+                    value,
+                } => match operation {
+                    Operation::Add => config.inc_ratio(value),
+                    Operation::Subtract => config.dec_ratio(value),
+                    Operation::Set => config.set_ratio(value),
+                },
+                _ => println!("invalid command {}", cmd),
+            });
 
         Ok(())
     }
@@ -130,7 +117,7 @@ impl Layout for FilTile {
     ) -> Result<GeneratedLayout, Self::Error> {
         self.tag_log.record_tags(tags);
 
-        let config = self.get_config(self.tag_log.last_tag, output);
+        let config = self.configs.retrieve(self.tag_log.last_tag, output);
 
         let params = Params {
             view_count,

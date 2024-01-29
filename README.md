@@ -30,10 +30,8 @@ Following are the commands that can be sent to `riverctl send-layout-cmd filtile
         toggle.</dd>
 </dl>
 
-All commands can be prefaced with one or both of the following options. It's
-recommended to send both at the same time. Either can be "all". Both set to
-"all" changes the default. Make sure to put more general commands first and
-they will be picked up by the commands that follow.
+All commands can be prefaced with one or both of the following options. Either
+can be "all". Both set to "all" changes the default. 
 
 <dl>
     <dt>--output</dt>
