@@ -35,7 +35,7 @@ can be "all". Both set to "all" changes the default.
 
 <dl>
     <dt>--output</dt>
-    <dd>The output "monitor" to apply this setting to.</dd>
+    <dd>The output (monitor) to apply this setting to.</dd>
     <dt>--tags</dt>
     <dd>The tags to apply this setting to.</dd>
 </dl>
