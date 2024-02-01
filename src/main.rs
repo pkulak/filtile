@@ -6,7 +6,7 @@ use config::{Config, ConfigStorage};
 use parse::{parse_command, parse_output, parse_tags, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
-use tile::{LeftPrimary, PaddedPrimary, Params, RightPrimary, Tile, TileType};
+use tile::{LeftPrimary, Monocle, PaddedPrimary, Params, RightPrimary, Tile, TileType};
 
 fn main() {
     let mut layout = FilTile {
@@ -18,7 +18,7 @@ fn main() {
     let call_string = all_args[1..].join(" ");
 
     for cmd in call_string.split(',') {
-        if cmd.trim().len() > 0 {
+        if !cmd.trim().is_empty() {
             let _ = layout.user_cmd(cmd.trim().to_string(), Some(0), "all");
         }
     }
@@ -68,6 +68,9 @@ impl Layout for FilTile {
                 Command::Single("pad") => {
                     config.pad = !config.pad;
                 }
+                Command::Single("monocle") => {
+                    config.monocle = !config.monocle;
+                }
                 Command::Textual {
                     namespace: "main-location",
                     value: "left",
@@ -84,6 +87,14 @@ impl Layout for FilTile {
                     namespace: "pad",
                     value: "off",
                 } => config.pad = false,
+                Command::Textual {
+                    namespace: "monocle",
+                    value: "on",
+                } => config.monocle = true,
+                Command::Textual {
+                    namespace: "monocle",
+                    value: "off",
+                } => config.monocle = false,
                 Command::Numeric {
                     namespace: "view-padding",
                     operation,
@@ -148,6 +159,10 @@ impl Layout for FilTile {
 
         if config.pad {
             tile = Box::new(PaddedPrimary::new(tile));
+        }
+
+        if config.monocle {
+            tile = Box::new(Monocle::new(tile));
         }
 
         let mut layout = GeneratedLayout {

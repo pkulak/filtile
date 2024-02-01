@@ -7,6 +7,7 @@ pub struct Config {
     pub ratio: u32,
     pub tile: TileType,
     pub pad: bool,
+    pub monocle: bool,
 }
 
 impl Config {
@@ -17,6 +18,7 @@ impl Config {
             ratio: 55,
             tile: TileType::LeftPrimary,
             pad: false,
+            monocle: false,
         }
     }
 

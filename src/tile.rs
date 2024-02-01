@@ -28,6 +28,15 @@ pub struct Params {
     pub usable_height: u32,
 }
 
+impl Params {
+    pub fn with_view_count(&self, view_count: u32) -> Params {
+        Params {
+            view_count,
+            ..*self
+        }
+    }
+}
+
 pub struct LeftPrimary {
     inner: u32,
     outer: u32,
@@ -158,12 +167,7 @@ impl PaddedPrimary {
 
     // the primary width, pretending that there is more than one view
     fn primary_width(&self, params: &Params) -> u32 {
-        let fake_params = Params {
-            view_count: 2,
-            ..*params
-        };
-
-        self.wrapped.get_primary_width(&fake_params)
+        self.wrapped.get_primary_width(&params.with_view_count(2))
     }
 }
 
@@ -206,5 +210,49 @@ impl Tile for PaddedPrimary {
 
     fn get_stack_height(&self, params: &Params, index: u32) -> u32 {
         self.wrapped.get_stack_height(params, index)
+    }
+}
+
+pub struct Monocle {
+    wrapped: Box<dyn Tile>,
+}
+
+impl Monocle {
+    pub fn new(wrapped: Box<dyn Tile>) -> Monocle {
+        Monocle { wrapped }
+    }
+}
+
+impl Tile for Monocle {
+    fn get_primary_x(&self, params: &Params) -> i32 {
+        self.wrapped.get_primary_x(&params.with_view_count(1))
+    }
+
+    fn get_primary_y(&self, params: &Params) -> i32 {
+        self.wrapped.get_primary_y(&params.with_view_count(1))
+    }
+
+    fn get_primary_width(&self, params: &Params) -> u32 {
+        self.wrapped.get_primary_width(&params.with_view_count(1))
+    }
+
+    fn get_primary_height(&self, params: &Params) -> u32 {
+        self.wrapped.get_primary_height(&params.with_view_count(1))
+    }
+
+    fn get_stack_x(&self, params: &Params, _: u32) -> i32 {
+        self.wrapped.get_primary_x(&params.with_view_count(1))
+    }
+
+    fn get_stack_y(&self, params: &Params, _: u32) -> i32 {
+        self.wrapped.get_primary_y(&params.with_view_count(1))
+    }
+
+    fn get_stack_width(&self, params: &Params, _: u32) -> u32 {
+        self.wrapped.get_primary_width(&params.with_view_count(1))
+    }
+
+    fn get_stack_height(&self, params: &Params, _: u32) -> u32 {
+        self.wrapped.get_primary_height(&params.with_view_count(1))
     }
 }
