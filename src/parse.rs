@@ -71,6 +71,28 @@ pub fn parse_command(cmd: &str) -> Command {
     Command::Invalid
 }
 
+// rip the first command off a string, leave the rest alone
+pub fn split_commands(cmd: &str) -> (&str, Option<&str>) {
+    let parts: Vec<&str> = cmd.splitn(2, ',').collect();
+
+    let car = parts[0];
+
+    let cdr = match parts.get(1) {
+        Some(m) => {
+            let trimmed = m.trim();
+
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        }
+        _ => None,
+    };
+
+    (car, cdr)
+}
+
 fn find_option<'a>(option: &'a str, cmd: &'a str) -> Option<&'a str> {
     let parts: Vec<&str> = cmd.split(' ').collect();
 
@@ -104,7 +126,20 @@ fn remove_options<'a>(parts: &[&'a str]) -> Vec<&'a str> {
 mod tests {
     use crate::parse::{Command, Operation};
 
-    use super::{parse_command, parse_output, parse_tags};
+    use super::{parse_command, parse_output, parse_tags, split_commands};
+
+    #[test]
+    fn it_splits_commands() {
+        let (car, cdr) = split_commands("hi there you");
+
+        assert_eq!(car, "hi there you");
+        assert_eq!(cdr, None);
+
+        let (car, cdr) = split_commands("first, and the second, third");
+
+        assert_eq!(car, "first");
+        assert_eq!(cdr, Some("and the second, third"));
+    }
 
     #[test]
     fn it_parses_invalid_commands() {

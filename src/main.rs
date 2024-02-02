@@ -3,7 +3,7 @@ mod parse;
 mod tile;
 
 use config::{Config, ConfigStorage};
-use parse::{parse_command, parse_output, parse_tags, Command, Operation};
+use parse::{parse_command, parse_output, parse_tags, split_commands, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
 use tile::{LeftPrimary, Monocle, PaddedPrimary, Params, RightPrimary, Tile, TileType};
@@ -15,12 +15,10 @@ fn main() {
     };
 
     let all_args: Vec<String> = env::args().collect();
-    let call_string = all_args[1..].join(" ");
+    let call_string = all_args[1..].join(" ").trim().to_string();
 
-    for cmd in call_string.split(',') {
-        if !cmd.trim().is_empty() {
-            let _ = layout.user_cmd(cmd.trim().to_string(), Some(0), "all");
-        }
+    if !call_string.is_empty() {
+        let _ = layout.user_cmd(call_string, Some(0), "all");
     }
 
     run(layout).unwrap();
@@ -46,18 +44,20 @@ impl Layout for FilTile {
             self.tag_log.record_tags(t);
         }
 
-        let tags = match parse_tags(&cmd) {
+        let (cmd, cdr) = split_commands(&cmd);
+
+        let tags = match parse_tags(cmd) {
             Some(t) => t,
             None => self.tag_log.last_tag,
         };
 
-        let output = match parse_output(&cmd) {
+        let output = match parse_output(cmd) {
             Some(o) => o,
             None => output,
         };
 
         self.configs
-            .apply(tags, output, |config| match parse_command(&cmd) {
+            .apply(tags, output, |config| match parse_command(cmd) {
                 Command::Single("swap") => {
                     if config.tile == TileType::LeftPrimary {
                         config.tile = TileType::RightPrimary;
@@ -124,6 +124,10 @@ impl Layout for FilTile {
                 },
                 _ => println!("invalid command {}", cmd),
             });
+
+        if let Some(remaining) = cdr {
+            let _ = self.user_cmd(remaining.to_string(), None, output);
+        }
 
         Ok(())
     }
