@@ -1,7 +1,7 @@
 # Filtile
 
 This is a layout manager for the [River](https://github.com/riverwm/river) window
-manager. It's basically `rivertile`, but with a few things not implimented (because
+manager. It's basically `rivertile`, but with a few things not implemented (because
 I don't use them), and configuration per tag.
 
 ## Usage
