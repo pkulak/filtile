@@ -203,7 +203,7 @@ impl ConfigStorage {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::ALL;
+    use crate::{config::ALL, tile::TileType};
 
     use super::{Config, ConfigStorage};
 
@@ -233,5 +233,31 @@ mod tests {
         assert_eq!(8, storage.tag_list[0].config.ratio);
         assert_eq!(8, storage.tag_list[1].config.ratio);
         assert_eq!(8, storage.tag_list[2].config.ratio);
+    }
+
+    #[test]
+    fn it_combines_configs() {
+        let mut storage = ConfigStorage::new(Config::new());
+
+        // use padding on the whole monitor
+        storage.apply(0, "HD-1", |c| c.pad = true);
+
+        // but change a couple things on tag 1
+        storage.apply(1, "HD-1", |c| c.ratio = 80);
+        storage.apply(1, "HD-1", |c| c.tile = TileType::RightPrimary);
+
+        // grab a config on tag 6
+        let config = storage.retrieve(32, "HD-1");
+
+        assert!(config.pad);
+        assert_eq!(config.ratio, 55);
+        assert_eq!(config.tile, TileType::LeftPrimary);
+
+        // and then 1
+        let config = storage.retrieve(1, "HD-1");
+
+        assert!(config.pad);
+        assert_eq!(config.ratio, 80);
+        assert_eq!(config.tile, TileType::RightPrimary);
     }
 }
