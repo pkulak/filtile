@@ -16,7 +16,7 @@ impl Config {
             inner: 6,
             outer: 6,
             ratio: 55,
-            tile: TileType::LeftPrimary,
+            tile: TileType::Left,
             pad: false,
             monocle: false,
         }
@@ -244,20 +244,20 @@ mod tests {
 
         // but change a couple things on tag 1
         storage.apply(1, "HD-1", |c| c.ratio = 80);
-        storage.apply(1, "HD-1", |c| c.tile = TileType::RightPrimary);
+        storage.apply(1, "HD-1", |c| c.tile = TileType::Right);
 
         // grab a config on tag 6
         let config = storage.retrieve(32, "HD-1");
 
         assert!(config.pad);
         assert_eq!(config.ratio, 55);
-        assert_eq!(config.tile, TileType::LeftPrimary);
+        assert_eq!(config.tile, TileType::Left);
 
         // and then 1
         let config = storage.retrieve(1, "HD-1");
 
         assert!(config.pad);
         assert_eq!(config.ratio, 80);
-        assert_eq!(config.tile, TileType::RightPrimary);
+        assert_eq!(config.tile, TileType::Right);
     }
 }

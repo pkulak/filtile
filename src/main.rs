@@ -6,7 +6,7 @@ use config::{Config, ConfigStorage};
 use parse::{parse_command, parse_output, parse_tags, split_commands, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
-use tile::{LeftPrimary, Monocle, PaddedPrimary, Params, RightPrimary, Tile, TileType};
+use tile::{rotate, LeftPrimary, Monocle, PaddedPrimary, Params, RightPrimary, Tile, TileType};
 
 fn main() {
     let mut layout = FilTile {
@@ -58,13 +58,12 @@ impl Layout for FilTile {
 
         self.configs
             .apply(tags, output, |config| match parse_command(cmd) {
-                Command::Single("swap") => {
-                    if config.tile == TileType::LeftPrimary {
-                        config.tile = TileType::RightPrimary;
-                    } else {
-                        config.tile = TileType::LeftPrimary;
-                    }
-                }
+                Command::Single("swap") => match config.tile {
+                    TileType::Left => config.tile = TileType::Right,
+                    TileType::Top => config.tile = TileType::Bottom,
+                    TileType::Right => config.tile = TileType::Left,
+                    TileType::Bottom => config.tile = TileType::Top,
+                },
                 Command::Single("pad") => {
                     config.pad = !config.pad;
                 }
@@ -74,11 +73,19 @@ impl Layout for FilTile {
                 Command::Textual {
                     namespace: "main-location",
                     value: "left",
-                } => config.tile = TileType::LeftPrimary,
+                } => config.tile = TileType::Left,
+                Command::Textual {
+                    namespace: "main-location",
+                    value: "top",
+                } => config.tile = TileType::Top,
                 Command::Textual {
                     namespace: "main-location",
                     value: "right",
-                } => config.tile = TileType::RightPrimary,
+                } => config.tile = TileType::Right,
+                Command::Textual {
+                    namespace: "main-location",
+                    value: "bottom",
+                } => config.tile = TileType::Bottom,
                 Command::Textual {
                     namespace: "pad",
                     value: "on",
@@ -151,14 +158,22 @@ impl Layout for FilTile {
         };
 
         let mut tile = match config.tile {
-            TileType::LeftPrimary => {
-                Box::new(LeftPrimary::new(config.inner, config.outer, config.ratio))
-                    as Box<dyn Tile>
-            }
-            TileType::RightPrimary => {
+            TileType::Left => Box::new(LeftPrimary::new(config.inner, config.outer, config.ratio))
+                as Box<dyn Tile>,
+            TileType::Top => rotate(Box::new(LeftPrimary::new(
+                config.inner,
+                config.outer,
+                config.ratio,
+            ))),
+            TileType::Right => {
                 Box::new(RightPrimary::new(config.inner, config.outer, config.ratio))
                     as Box<dyn Tile>
             }
+            TileType::Bottom => rotate(Box::new(RightPrimary::new(
+                config.inner,
+                config.outer,
+                config.ratio,
+            ))),
         };
 
         if config.pad {

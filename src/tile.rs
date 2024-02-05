@@ -18,8 +18,10 @@ pub trait Tile {
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum TileType {
-    LeftPrimary,
-    RightPrimary,
+    Left,
+    Top,
+    Right,
+    Bottom,
 }
 
 pub struct Params {
@@ -156,6 +158,64 @@ impl Tile for RightPrimary {
     }
 }
 
+pub struct Rotated {
+    wrapped: Box<dyn Tile>,
+}
+
+pub fn rotate(wrapped: Box<dyn Tile>) -> Box<dyn Tile> {
+    Box::new(Rotated::new(wrapped))
+}
+
+impl Rotated {
+    pub fn new(wrapped: Box<dyn Tile>) -> Rotated {
+        Rotated { wrapped }
+    }
+
+    fn translate(params: &Params) -> Params {
+        Params {
+            view_count: params.view_count,
+            usable_width: params.usable_height,
+            usable_height: params.usable_width,
+        }
+    }
+}
+
+impl Tile for Rotated {
+    fn get_primary_x(&self, params: &Params) -> i32 {
+        self.wrapped.get_primary_y(&Rotated::translate(params))
+    }
+
+    fn get_primary_y(&self, params: &Params) -> i32 {
+        self.wrapped.get_primary_x(&Rotated::translate(params))
+    }
+
+    fn get_primary_width(&self, params: &Params) -> u32 {
+        self.wrapped.get_primary_height(&Rotated::translate(params))
+    }
+
+    fn get_primary_height(&self, params: &Params) -> u32 {
+        self.wrapped.get_primary_width(&Rotated::translate(params))
+    }
+
+    fn get_stack_x(&self, params: &Params, index: u32) -> i32 {
+        self.wrapped.get_stack_y(&Rotated::translate(params), index)
+    }
+
+    fn get_stack_y(&self, params: &Params, index: u32) -> i32 {
+        self.wrapped.get_stack_x(&Rotated::translate(params), index)
+    }
+
+    fn get_stack_width(&self, params: &Params, index: u32) -> u32 {
+        self.wrapped
+            .get_stack_height(&Rotated::translate(params), index)
+    }
+
+    fn get_stack_height(&self, params: &Params, index: u32) -> u32 {
+        self.wrapped
+            .get_stack_width(&Rotated::translate(params), index)
+    }
+}
+
 pub struct PaddedPrimary {
     wrapped: Box<dyn Tile>,
 }
@@ -169,6 +229,11 @@ impl PaddedPrimary {
     fn primary_width(&self, params: &Params) -> u32 {
         self.wrapped.get_primary_width(&params.with_view_count(2))
     }
+
+    // the primary height, pretending that there is more than one view
+    fn primary_height(&self, params: &Params) -> u32 {
+        self.wrapped.get_primary_height(&params.with_view_count(2))
+    }
 }
 
 impl Tile for PaddedPrimary {
@@ -181,6 +246,10 @@ impl Tile for PaddedPrimary {
     }
 
     fn get_primary_y(&self, params: &Params) -> i32 {
+        if params.view_count == 1 {
+            return ((params.usable_height - self.primary_height(params)) / 2) as i32;
+        }
+
         self.wrapped.get_primary_y(params)
     }
 
@@ -193,6 +262,10 @@ impl Tile for PaddedPrimary {
     }
 
     fn get_primary_height(&self, params: &Params) -> u32 {
+        if params.view_count == 1 {
+            return self.primary_height(params);
+        }
+
         self.wrapped.get_primary_height(params)
     }
 

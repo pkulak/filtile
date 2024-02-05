@@ -21,12 +21,12 @@ Following are the commands that can be sent to `riverctl send-layout-cmd filtile
         ratio must be between 10 and 90, inclusive.</dd>
     <dt>swap<dt>
     <dd>Swap the main area to the other side of the layout.</dd>
-    <dt>main-location [left | right]<dt>
+    <dt>main-location [left | top | right | bottom]<dt>
     <dd>Set the location of the main area in the layout. </dd>
     <dt>pad</dt>
     <dd>Toggle single view padding. When only one view is visible, it
-        will be centered and given as much width as it would have if there
-        were more windows. Also supports sending "on" or "off" to not
+        will be centered and given as much width/height as it would have if
+        there were more windows. Also supports sending "on" or "off" to not
         toggle.</dd>
     <dt>monocle</dt>
     <dd>Toggle the "monocle" layout. Also supports sending "on" or "off" to not
