@@ -104,29 +104,29 @@ impl Tile for LeftPrimary {
     }
 }
 
-pub struct RightPrimary {
-    wrapped: LeftPrimary,
+pub struct Flipped {
+    wrapped: Box<dyn Tile>,
 }
 
-impl RightPrimary {
-    pub fn new(inner: u32, outer: u32, ratio: u32) -> RightPrimary {
-        RightPrimary {
-            wrapped: LeftPrimary::new(inner, outer, ratio),
-        }
-    }
+pub fn flip(wrapped: Box<dyn Tile>) -> Box<dyn Tile> {
+    Box::new(Flipped::new(wrapped))
+}
 
-    fn get_center(&self, usable_width: u32) -> u32 {
-        (usable_width * (100 - self.wrapped.ratio)) / 100
+impl Flipped {
+    pub fn new(wrapped: Box<dyn Tile>) -> Flipped {
+        Flipped { wrapped }
     }
 }
 
-impl Tile for RightPrimary {
+impl Tile for Flipped {
     fn get_primary_x(&self, params: &Params) -> i32 {
         if params.view_count == 1 {
             return self.wrapped.get_primary_x(params);
         }
 
-        (self.get_center(params.usable_width) + self.wrapped.inner) as i32
+        params.usable_width as i32
+            - self.wrapped.get_primary_x(params)
+            - self.wrapped.get_primary_width(params) as i32
     }
 
     fn get_primary_y(&self, params: &Params) -> i32 {

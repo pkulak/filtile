@@ -6,7 +6,7 @@ use config::{Config, ConfigStorage};
 use parse::{parse_command, parse_output, parse_tags, split_commands, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
-use tile::{rotate, LeftPrimary, Monocle, PaddedPrimary, Params, RightPrimary, Tile, TileType};
+use tile::{flip, rotate, LeftPrimary, Monocle, PaddedPrimary, Params, Tile, TileType};
 
 fn main() {
     let mut layout = FilTile {
@@ -157,23 +157,14 @@ impl Layout for FilTile {
             usable_height,
         };
 
+        let base: Box<dyn Tile> =
+            Box::new(LeftPrimary::new(config.inner, config.outer, config.ratio));
+
         let mut tile = match config.tile {
-            TileType::Left => Box::new(LeftPrimary::new(config.inner, config.outer, config.ratio))
-                as Box<dyn Tile>,
-            TileType::Top => rotate(Box::new(LeftPrimary::new(
-                config.inner,
-                config.outer,
-                config.ratio,
-            ))),
-            TileType::Right => {
-                Box::new(RightPrimary::new(config.inner, config.outer, config.ratio))
-                    as Box<dyn Tile>
-            }
-            TileType::Bottom => rotate(Box::new(RightPrimary::new(
-                config.inner,
-                config.outer,
-                config.ratio,
-            ))),
+            TileType::Left => base,
+            TileType::Top => rotate(base),
+            TileType::Right => flip(base),
+            TileType::Bottom => rotate(flip(base)),
         };
 
         if config.pad {
