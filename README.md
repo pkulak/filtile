@@ -1,8 +1,8 @@
 # Filtile
 
 This is a layout manager for the [River](https://github.com/riverwm/river) window
-manager. It's basically `rivertile`, but with a few things not implemented (because
-I don't use them), and configuration per tag.
+manager. It's (nearly) a drop-in replacement for `rivertile`, but with a few things
+added and configuration per tag/output.
 
 ## Usage
 
@@ -16,15 +16,17 @@ Following are the commands that can be sent to `riverctl send-layout-cmd filtile
     <dd>Set the padding around views in pixels.</dd>
     <dt>outer-padding [pixels]</dt>
     <dd>Set the padding around the edge of the layout area in pixels.</dd>
+    <dt>main-location [left | top | right | bottom]<dt>
+    <dd>Set the location of the main area in the layout.</dd>
+    <dt>main-count [count]<dt>
+    <dd>Set the number of views in the main area of the layout.</dd>
     <dt>main-ratio [percent]</dt>
     <dd>Set the ratio of the main area to total layout area, in percent. The
         ratio must be between 10 and 90, inclusive.</dd>
-    <dt>swap<dt>
-    <dd>Swap the main area to the other side of the layout.</dd>
-    <dt>main-location [left | top | right | bottom]<dt>
-    <dd>Set the location of the main area in the layout. </dd>
+    <dt>flip<dt>
+    <dd>Flip the main area to the other side of the layout.</dd>
     <dt>pad</dt>
-    <dd>Toggle single view padding. When only one view is visible, it
+    <dd>Toggle single stack padding. When only one stack is visible, it
         will be centered and given as much width/height as it would have if
         there were more windows. Also supports sending "on" or "off" to not
         toggle.</dd>
@@ -53,7 +55,7 @@ as shown below.
 riverctl map normal Super H send-layout-cmd filtile "main-ratio -5"
 riverctl map normal Super L send-layout-cmd filtile "main-ratio +5"
 
-riverctl map normal Super Z send-layout-cmd filtile "swap"
+riverctl map normal Super Z send-layout-cmd filtile "flip"
 riverctl map normal Super C send-layout-cmd filtile "pad"
 
 # Set the default layout generator to be filtile and start it.

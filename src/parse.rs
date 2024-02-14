@@ -151,33 +151,33 @@ mod tests {
 
     #[test]
     fn it_parses_single_commands() {
-        match parse_command("swap") {
-            Command::Single(v) => assert_eq!("swap", v),
+        match parse_command("flip") {
+            Command::Single(v) => assert_eq!("flip", v),
             _ => panic!("parser fail"),
         };
     }
 
     #[test]
     fn it_ignores_options() {
-        match parse_command("--output HD1 swap --tags 1") {
-            Command::Single(v) => assert_eq!("swap", v),
+        match parse_command("--output HD1 flip --tags 1") {
+            Command::Single(v) => assert_eq!("flip", v),
             _ => panic!("parser fail"),
         };
     }
 
     #[test]
     fn it_parses_options() {
-        match parse_output("--output HD1 swap") {
+        match parse_output("--output HD1 flip") {
             Some(o) => assert_eq!("HD1", o),
             _ => panic!("parser fail"),
         }
 
-        match parse_tags("swap --tags all") {
+        match parse_tags("flip --tags all") {
             Some(t) => assert_eq!(0, t),
             _ => panic!("parser fail"),
         }
 
-        match parse_tags("swap --tags 32") {
+        match parse_tags("flip --tags 32") {
             Some(t) => assert_eq!(32, t),
             _ => panic!("parser fail"),
         }

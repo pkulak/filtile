@@ -6,7 +6,7 @@ use config::{Config, ConfigStorage};
 use parse::{parse_command, parse_output, parse_tags, split_commands, Command, Operation};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
-use tile::{flip, rotate, LeftPrimary, Monocle, PaddedPrimary, Params, Tile, TileType};
+use tile::{flip, rotate, LeftPrimary, Monocle, Padded, Params, Tile, TileType};
 
 fn main() {
     let mut layout = FilTile {
@@ -58,7 +58,7 @@ impl Layout for FilTile {
 
         self.configs
             .apply(tags, output, |config| match parse_command(cmd) {
-                Command::Single("swap") => match config.tile {
+                Command::Single("flip") => match config.tile {
                     TileType::Left => config.tile = TileType::Right,
                     TileType::Top => config.tile = TileType::Bottom,
                     TileType::Right => config.tile = TileType::Left,
@@ -129,6 +129,15 @@ impl Layout for FilTile {
                     Operation::Subtract => config.dec_ratio(value),
                     Operation::Set => config.set_ratio(value),
                 },
+                Command::Numeric {
+                    namespace: "main-count",
+                    operation,
+                    value,
+                } => match operation {
+                    Operation::Add => config.inc_main(value),
+                    Operation::Subtract => config.dec_main(value),
+                    Operation::Set => config.set_main(value),
+                },
                 _ => println!("invalid command {}", cmd),
             });
 
@@ -157,8 +166,12 @@ impl Layout for FilTile {
             usable_height,
         };
 
-        let base: Box<dyn Tile> =
-            Box::new(LeftPrimary::new(config.inner, config.outer, config.ratio));
+        let base: Box<dyn Tile> = Box::new(LeftPrimary::new(
+            config.inner,
+            config.outer,
+            config.ratio,
+            config.main,
+        ));
 
         let mut tile = match config.tile {
             TileType::Left => base,
@@ -167,8 +180,18 @@ impl Layout for FilTile {
             TileType::Bottom => rotate(flip(base)),
         };
 
-        if config.pad {
-            tile = Box::new(PaddedPrimary::new(tile));
+        if config.pad && view_count <= config.main {
+            if config.tile == TileType::Left || config.tile == TileType::Right {
+                let center = (usable_width * config.ratio) / 100;
+                let pad = (usable_width - center) / 2;
+
+                tile = Box::new(Padded::new(tile, pad, 0));
+            } else {
+                let center = (usable_height * config.ratio) / 100;
+                let pad = (usable_height - center) / 2;
+
+                tile = Box::new(Padded::new(tile, 0, pad));
+            }
         }
 
         if config.monocle {
@@ -180,19 +203,12 @@ impl Layout for FilTile {
             views: Vec::with_capacity(view_count as usize),
         };
 
-        layout.views.push(Rectangle {
-            x: tile.get_primary_x(&params),
-            y: tile.get_primary_y(&params),
-            width: tile.get_primary_width(&params),
-            height: tile.get_primary_height(&params),
-        });
-
-        for index in 1..view_count {
+        for index in 0..view_count {
             layout.views.push(Rectangle {
-                x: tile.get_stack_x(&params, index),
-                y: tile.get_stack_y(&params, index),
-                width: tile.get_stack_width(&params, index),
-                height: tile.get_stack_height(&params, index),
+                x: tile.get_x(&params, index),
+                y: tile.get_y(&params, index),
+                width: tile.get_width(&params, index),
+                height: tile.get_height(&params, index),
             });
         }
 

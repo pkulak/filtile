@@ -5,6 +5,7 @@ pub struct Config {
     pub inner: u32,
     pub outer: u32,
     pub ratio: u32,
+    pub main: u32,
     pub tile: TileType,
     pub pad: bool,
     pub monocle: bool,
@@ -16,6 +17,7 @@ impl Config {
             inner: 6,
             outer: 6,
             ratio: 55,
+            main: 1,
             tile: TileType::Left,
             pad: false,
             monocle: false,
@@ -60,6 +62,10 @@ impl Config {
         self.ratio = Config::ranged_inc(self.ratio, value, 90);
     }
 
+    pub fn inc_main(&mut self, value: u32) {
+        self.main = Config::ranged_inc(self.main, value, 16);
+    }
+
     pub fn dec_inner(&mut self, value: u32) {
         self.inner = Config::ranged_dec(self.inner, value, 0);
     }
@@ -72,6 +78,10 @@ impl Config {
         self.ratio = Config::ranged_dec(self.ratio, value, 10);
     }
 
+    pub fn dec_main(&mut self, value: u32) {
+        self.main = Config::ranged_dec(self.main, value, 1);
+    }
+
     pub fn set_inner(&mut self, value: u32) {
         self.inner = Config::ranged_set(value, 0, 1024);
     }
@@ -82,6 +92,10 @@ impl Config {
 
     pub fn set_ratio(&mut self, value: u32) {
         self.ratio = Config::ranged_set(value, 10, 90);
+    }
+
+    pub fn set_main(&mut self, value: u32) {
+        self.main = Config::ranged_set(value, 1, 16);
     }
 }
 
