@@ -60,6 +60,7 @@ pub enum TileType {
     Bottom,
 }
 
+#[derive(Clone, Debug)]
 pub struct Params {
     pub view_count: u32,
     pub usable_width: u32,
@@ -272,12 +273,12 @@ impl Tile for Rotated {
 
 pub struct Padded {
     wrapped: Box<dyn Tile>,
-    h_pad: u32,
-    v_pad: u32,
+    h_pad: i32,
+    v_pad: i32,
 }
 
 impl Padded {
-    pub fn new(wrapped: Box<dyn Tile>, h_pad: u32, v_pad: u32) -> Padded {
+    pub fn new(wrapped: Box<dyn Tile>, h_pad: i32, v_pad: i32) -> Padded {
         Padded {
             wrapped,
             h_pad,
@@ -286,10 +287,24 @@ impl Padded {
     }
 
     fn translate(&self, params: &Params) -> Params {
+        // what are we subtracting from the width and height? (can be negative)
+        let sub_w = self.h_pad * 2;
+        let sub_h = self.v_pad * 2;
+
+        // turn useable width and height into i32s
+        let w = params.usable_width as i32;
+        let h = params.usable_height as i32;
+
+        // do the check, and do nothing if invalid
+        if sub_w >= w || sub_h >= h {
+            return params.clone();
+        }
+
+        // now we know we can survive the cast back to u32
         Params {
             view_count: params.view_count,
-            usable_width: params.usable_width - self.h_pad * 2,
-            usable_height: params.usable_height - self.v_pad * 2,
+            usable_width: (w - sub_w) as u32,
+            usable_height: (h - sub_h) as u32,
         }
     }
 }
@@ -300,53 +315,38 @@ impl Tile for Padded {
     }
 
     fn get_primary_x(&self, params: &Params, index: u32) -> i32 {
-        if params.view_count <= self.wrapped.get_main() {
-            self.wrapped.get_primary_x(&self.translate(params), index) + self.h_pad as i32
-        } else {
-            self.wrapped.get_primary_x(params, index)
-        }
+        self.wrapped.get_primary_x(&self.translate(params), index) + self.h_pad
     }
 
     fn get_primary_y(&self, params: &Params, index: u32) -> i32 {
-        if params.view_count <= self.wrapped.get_main() {
-            self.wrapped.get_primary_y(&self.translate(params), index) + self.v_pad as i32
-        } else {
-            self.wrapped.get_primary_y(params, index)
-        }
+        self.wrapped.get_primary_y(&self.translate(params), index) + self.v_pad
     }
 
     fn get_primary_width(&self, params: &Params, index: u32) -> u32 {
-        if params.view_count <= self.wrapped.get_main() {
-            self.wrapped
-                .get_primary_width(&self.translate(params), index)
-        } else {
-            self.wrapped.get_primary_width(params, index)
-        }
+        self.wrapped
+            .get_primary_width(&self.translate(params), index)
     }
 
     fn get_primary_height(&self, params: &Params, index: u32) -> u32 {
-        if params.view_count <= self.wrapped.get_main() {
-            self.wrapped
-                .get_primary_height(&self.translate(params), index)
-        } else {
-            self.wrapped.get_primary_height(params, index)
-        }
+        self.wrapped
+            .get_primary_height(&self.translate(params), index)
     }
 
     fn get_stack_x(&self, params: &Params, index: u32) -> i32 {
-        self.wrapped.get_stack_x(params, index)
+        self.wrapped.get_stack_x(&self.translate(params), index) + self.h_pad
     }
 
     fn get_stack_y(&self, params: &Params, index: u32) -> i32 {
-        self.wrapped.get_stack_y(params, index)
+        self.wrapped.get_stack_y(&self.translate(params), index) + self.v_pad
     }
 
     fn get_stack_width(&self, params: &Params, index: u32) -> u32 {
-        self.wrapped.get_stack_width(params, index)
+        self.wrapped.get_stack_width(&self.translate(params), index)
     }
 
     fn get_stack_height(&self, params: &Params, index: u32) -> u32 {
-        self.wrapped.get_stack_height(params, index)
+        self.wrapped
+            .get_stack_height(&self.translate(params), index)
     }
 }
 

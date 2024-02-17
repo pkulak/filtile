@@ -1,4 +1,7 @@
-use crate::tile::TileType;
+use crate::{
+    parse::{parse_command, Command, Operation},
+    tile::TileType,
+};
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -9,6 +12,8 @@ pub struct Config {
     pub tile: TileType,
     pub pad: bool,
     pub monocle: bool,
+    pub smart_h: Option<u32>,
+    pub smart_v: Option<u32>,
 }
 
 impl Config {
@@ -21,6 +26,8 @@ impl Config {
             tile: TileType::Left,
             pad: false,
             monocle: false,
+            smart_h: None,
+            smart_v: None,
         }
     }
 
@@ -58,6 +65,20 @@ impl Config {
         self.outer = Config::ranged_inc(self.outer, value, 1024);
     }
 
+    pub fn inc_smart_h(&mut self, value: u32) {
+        self.smart_h = match self.smart_h {
+            Some(v) => Some(Config::ranged_inc(v, value, 1024)),
+            None => Some(Config::ranged_inc(self.inner + self.outer, value, 1024)),
+        }
+    }
+
+    pub fn inc_smart_v(&mut self, value: u32) {
+        self.smart_v = match self.smart_v {
+            Some(v) => Some(Config::ranged_inc(v, value, 1024)),
+            None => Some(Config::ranged_inc(self.inner + self.outer, value, 1024)),
+        }
+    }
+
     pub fn inc_ratio(&mut self, value: u32) {
         self.ratio = Config::ranged_inc(self.ratio, value, 90);
     }
@@ -72,6 +93,20 @@ impl Config {
 
     pub fn dec_outer(&mut self, value: u32) {
         self.outer = Config::ranged_dec(self.outer, value, 0);
+    }
+
+    pub fn dec_smart_h(&mut self, value: u32) {
+        self.smart_h = match self.smart_h {
+            Some(v) => Some(Config::ranged_dec(v, value, 0)),
+            None => Some(Config::ranged_dec(self.inner + self.outer, value, 0)),
+        }
+    }
+
+    pub fn dec_smart_v(&mut self, value: u32) {
+        self.smart_v = match self.smart_v {
+            Some(v) => Some(Config::ranged_dec(v, value, 0)),
+            None => Some(Config::ranged_dec(self.inner + self.outer, value, 0)),
+        }
     }
 
     pub fn dec_ratio(&mut self, value: u32) {
@@ -90,6 +125,14 @@ impl Config {
         self.outer = Config::ranged_set(value, 0, 1024);
     }
 
+    pub fn set_smart_h(&mut self, value: u32) {
+        self.smart_h = Some(Config::ranged_set(value, 0, 1024))
+    }
+
+    pub fn set_smart_v(&mut self, value: u32) {
+        self.smart_v = Some(Config::ranged_set(value, 0, 1024))
+    }
+
     pub fn set_ratio(&mut self, value: u32) {
         self.ratio = Config::ranged_set(value, 10, 90);
     }
@@ -101,9 +144,6 @@ impl Config {
 
 static ALL: &str = "all";
 
-// Is it a bit silly to do this instead of throwing them in a map and calling
-// it a day? Yup! But, in my defense, storing complex objects in a map causes
-// all kinds of issues that this avoids.
 pub struct ConfigStorage {
     tag_list: Vec<ConfigEntry>,
     default: Config,
@@ -174,6 +214,18 @@ impl ConfigStorage {
         &self.default
     }
 
+    fn store(&mut self, tags: u32, output: &str, config: Config) {
+        // remove if exists
+        self.tag_list.retain(|e| !e.matches_exact(tags, output));
+
+        // and store it
+        self.tag_list.push(ConfigEntry {
+            tags,
+            output: output.to_string(),
+            config,
+        });
+    }
+
     pub fn apply(&mut self, tags: u32, output: &str, f: impl Fn(&mut Config)) {
         let filtered: Vec<&mut ConfigEntry> = self
             .tag_list
@@ -202,15 +254,132 @@ impl ConfigStorage {
         self.store(tags, output, config);
     }
 
-    fn store(&mut self, tags: u32, output: &str, config: Config) {
-        // remove if exists
-        self.tag_list.retain(|e| !e.matches_exact(tags, output));
-
-        // and store it
-        self.tag_list.push(ConfigEntry {
-            tags,
-            output: output.to_string(),
-            config,
+    pub fn apply_cmd(&mut self, tags: u32, output: &str, cmd: &str) {
+        self.apply(tags, output, |config| match parse_command(cmd) {
+            Command::Single("flip") => match config.tile {
+                TileType::Left => config.tile = TileType::Right,
+                TileType::Top => config.tile = TileType::Bottom,
+                TileType::Right => config.tile = TileType::Left,
+                TileType::Bottom => config.tile = TileType::Top,
+            },
+            Command::Single("pad") => {
+                config.pad = !config.pad;
+            }
+            Command::Single("monocle") => {
+                config.monocle = !config.monocle;
+            }
+            Command::Textual {
+                namespace: "main-location",
+                value: "left",
+            } => config.tile = TileType::Left,
+            Command::Textual {
+                namespace: "main-location",
+                value: "top",
+            } => config.tile = TileType::Top,
+            Command::Textual {
+                namespace: "main-location",
+                value: "right",
+            } => config.tile = TileType::Right,
+            Command::Textual {
+                namespace: "main-location",
+                value: "bottom",
+            } => config.tile = TileType::Bottom,
+            Command::Textual {
+                namespace: "pad",
+                value: "on",
+            } => config.pad = true,
+            Command::Textual {
+                namespace: "pad",
+                value: "off",
+            } => config.pad = false,
+            Command::Textual {
+                namespace: "monocle",
+                value: "on",
+            } => config.monocle = true,
+            Command::Textual {
+                namespace: "monocle",
+                value: "off",
+            } => config.monocle = false,
+            Command::Textual {
+                namespace: "smart-padding",
+                value: "off",
+            } => {
+                config.smart_h = None;
+                config.smart_v = None
+            }
+            Command::Numeric {
+                namespace: "view-padding",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_inner(value),
+                Operation::Subtract => config.dec_inner(value),
+                Operation::Set => config.set_inner(value),
+            },
+            Command::Numeric {
+                namespace: "outer-padding",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_outer(value),
+                Operation::Subtract => config.dec_outer(value),
+                Operation::Set => config.set_outer(value),
+            },
+            Command::Numeric {
+                namespace: "smart-padding",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => {
+                    config.inc_smart_h(value);
+                    config.inc_smart_v(value)
+                }
+                Operation::Subtract => {
+                    config.dec_smart_h(value);
+                    config.dec_smart_v(value)
+                }
+                Operation::Set => {
+                    config.set_smart_h(value);
+                    config.set_smart_v(value)
+                }
+            },
+            Command::Numeric {
+                namespace: "smart-padding-h",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_smart_h(value),
+                Operation::Subtract => config.dec_smart_h(value),
+                Operation::Set => config.set_smart_h(value),
+            },
+            Command::Numeric {
+                namespace: "smart-padding-v",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_smart_v(value),
+                Operation::Subtract => config.dec_smart_v(value),
+                Operation::Set => config.set_smart_v(value),
+            },
+            Command::Numeric {
+                namespace: "main-ratio",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_ratio(value),
+                Operation::Subtract => config.dec_ratio(value),
+                Operation::Set => config.set_ratio(value),
+            },
+            Command::Numeric {
+                namespace: "main-count",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_main(value),
+                Operation::Subtract => config.dec_main(value),
+                Operation::Set => config.set_main(value),
+            },
+            _ => println!("invalid command {}", cmd),
         });
     }
 }
