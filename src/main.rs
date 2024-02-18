@@ -2,7 +2,7 @@ mod config;
 mod parse;
 mod tile;
 
-use config::{Config, ConfigStorage};
+use config::ConfigStorage;
 use parse::{parse_output, parse_tags, split_commands};
 use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
@@ -11,14 +11,14 @@ use tile::{flip, rotate, LeftPrimary, Monocle, Padded, Params, Tile, TileType};
 fn main() {
     let mut layout = FilTile {
         tag_log: TagLog::new(),
-        configs: ConfigStorage::new(Config::new()),
+        configs: ConfigStorage::new(),
     };
 
     let all_args: Vec<String> = env::args().collect();
     let call_string = all_args[1..].join(" ").trim().to_string();
 
     if !call_string.is_empty() {
-        let _ = layout.user_cmd(call_string, Some(0), "all");
+        let _ = layout.user_cmd(call_string, None, "all");
     }
 
     run(layout).unwrap();
@@ -44,22 +44,27 @@ impl Layout for FilTile {
             self.tag_log.record_tags(t);
         }
 
+        let output = match output {
+            "all" => None,
+            _ => Some(output),
+        };
+
         let (cmd, cdr) = split_commands(&cmd);
 
         let tags = match parse_tags(cmd) {
-            Some(t) => t,
+            Some(t) => Some(t),
             None => self.tag_log.last_tag,
         };
 
         let output = match parse_output(cmd) {
-            Some(o) => o,
+            Some(o) => Some(o),
             None => output,
         };
 
         self.configs.apply_cmd(tags, output, cmd);
 
         if let Some(remaining) = cdr {
-            let _ = self.user_cmd(remaining.to_string(), None, output);
+            let _ = self.user_cmd(remaining.to_string(), None, output.unwrap_or("all"));
         }
 
         Ok(())
@@ -75,7 +80,7 @@ impl Layout for FilTile {
     ) -> Result<GeneratedLayout, Self::Error> {
         self.tag_log.record_tags(tags);
 
-        let config = self.configs.retrieve(self.tag_log.last_tag, output);
+        let config = self.configs.build(self.tag_log.last_tag, Some(output));
 
         let params = Params {
             view_count,
@@ -152,21 +157,21 @@ impl Layout for FilTile {
 // Keep track of the last "single" tag we see, so that we can store and
 // recall configs not based on combinations.
 struct TagLog {
-    pub last_tag: u32,
+    pub last_tag: Option<u32>,
     single_tags: Vec<u32>,
 }
 
 impl TagLog {
     pub fn new() -> TagLog {
         TagLog {
-            last_tag: 0,
+            last_tag: None,
             single_tags: (0..31).map(|i| 1 << i).chain(iter::once(0)).collect(),
         }
     }
 
     pub fn record_tags(&mut self, tag: u32) {
         if self.single_tags.contains(&tag) {
-            self.last_tag = tag;
+            self.last_tag = Some(tag);
         }
     }
 }
@@ -183,6 +188,6 @@ mod tests {
         log.record_tags(14);
         log.record_tags(12);
 
-        assert_eq!(512, log.last_tag);
+        assert_eq!(Some(512), log.last_tag);
     }
 }

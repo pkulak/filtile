@@ -52,7 +52,7 @@ pub trait Tile {
     }
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum TileType {
     Left,
     Top,
