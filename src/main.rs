@@ -125,6 +125,7 @@ impl Layout for FilTile {
         // finally, smart gaps
         if (view_count == 1 || config.monocle)
             && (config.smart_h.is_some() || config.smart_v.is_some())
+            && !config.pad
         {
             let existing = (config.inner + config.outer) as i32;
 

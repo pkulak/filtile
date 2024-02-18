@@ -76,15 +76,12 @@ riverctl default-layout filtile
 #   single windows from being gigantic.
 #
 # - A scratch pad on tag 7 with pad (to keep the first window from resizing
-#   a bunch) and giant gaps for bling. Notice that we have to turn off
-#   smart padding, since it was first applied to all tags; rules are evaluated
-#   in order.
+#   a bunch) and giant gaps for bling. 
 #
 # - Tag 1 usually has a browser, which is usually easier to read when it's on
 #   the right.
 filtile \
     --output HDMI-A-1 smart-padding-h 384, \
-    --tags $((1 << 6)) smart-padding off, \
     --tags $((1 << 6)) pad on, \
     --tags $((1 << 6)) view-padding 64, \
     --tags $((1 << 6)) outer-padding 64, \
