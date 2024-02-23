@@ -238,6 +238,42 @@ impl ConfigStorage {
                 Operation::Set => config.set_ratio(value),
             },
             Command::Numeric {
+                namespace: "move-split-up",
+                operation: Operation::Set,
+                value,
+            } => match config.tile {
+                TileType::Top => config.dec_ratio(value),
+                TileType::Bottom => config.inc_ratio(value),
+                _ => {}
+            },
+            Command::Numeric {
+                namespace: "move-split-down",
+                operation: Operation::Set,
+                value,
+            } => match config.tile {
+                TileType::Top => config.inc_ratio(value),
+                TileType::Bottom => config.dec_ratio(value),
+                _ => {}
+            },
+            Command::Numeric {
+                namespace: "move-split-left",
+                operation: Operation::Set,
+                value,
+            } => match config.tile {
+                TileType::Left => config.dec_ratio(value),
+                TileType::Right => config.inc_ratio(value),
+                _ => {}
+            },
+            Command::Numeric {
+                namespace: "move-split-right",
+                operation: Operation::Set,
+                value,
+            } => match config.tile {
+                TileType::Left => config.inc_ratio(value),
+                TileType::Right => config.dec_ratio(value),
+                _ => {}
+            },
+            Command::Numeric {
                 namespace: "main-count",
                 operation,
                 value,

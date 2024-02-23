@@ -43,6 +43,10 @@ Following are the commands that can be sent to `riverctl send-layout-cmd filtile
     <dt>smart-padding-v [pixels]</dt>
     <dd>The vertical (top and bottom) padding to apply when there is only one
         window (or monocle).</dd>
+    <dt>move-split-[up|down|left|right] [percent]</dt>
+    <dd>A different way to think about the main ratio. "move-split-right", for
+        example, will make the main-ratio larger when the main-location is
+        left, smaller when it's right, and is a no op for top and bottom.</dd>
 </dl>
 
 All commands can be prefaced with one or both of the following options. Either
@@ -61,15 +65,13 @@ as shown below.
 ## Examples
 
 ```bash
-# Super+H and Super+L to decrease/increase the main ratio of filtile
-riverctl map normal Super H send-layout-cmd filtile "main-ratio -5"
-riverctl map normal Super L send-layout-cmd filtile "main-ratio +5"
+riverctl map normal Super LEFT send-layout-cmd filtile "move-split-left 5"
+riverctl map normal Super RIGHT send-layout-cmd filtile "move-split-right 5"
 
 riverctl map normal Super Z send-layout-cmd filtile "flip"
 riverctl map normal Super C send-layout-cmd filtile "pad"
 
 # Set the default layout generator to be filtile and start it.
-# River will send the process group of the init executable SIGTERM on exit.
 riverctl default-layout filtile
 
 # - Smart gaps on the sides of every tag (on the larger monitor), to keep
