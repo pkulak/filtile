@@ -34,15 +34,15 @@ Following are the commands that can be sent to `riverctl send-layout-cmd filtile
     <dd>Toggle the "monocle" layout. Also supports sending "on" or "off" to not
         toggle.</dd>
     <dt>smart-padding [pixels]</dt>
-    <dd>The padding to apply when there is only one window (or monocle).</dd>
+    <dd>The padding to apply when there is only one window (and no monocle).</dd>
     <dt>smart-padding off</dt>
     <dd>Turn off smart padding.</dd>
     <dt>smart-padding-h [pixels]</dt>
     <dd>The horizontal (left and right) padding to apply when there is only one
-        window (or monocle).</dd>
+        window (and no monocle).</dd>
     <dt>smart-padding-v [pixels]</dt>
     <dd>The vertical (top and bottom) padding to apply when there is only one
-        window (or monocle).</dd>
+        window (and no monocle).</dd>
     <dt>move-split-[up|down|left|right] [percent]</dt>
     <dd>A different way to think about the main ratio. "move-split-right", for
         example, will make the main-ratio larger when the main-location is
