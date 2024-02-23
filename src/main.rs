@@ -102,8 +102,12 @@ impl Layout for FilTile {
             TileType::Bottom => rotate(flip(base)),
         };
 
-        // apply the single-stack centering
-        if config.pad && view_count <= config.main {
+        // monocle
+        if config.monocle {
+            tile = Box::new(Monocle::new(tile));
+
+        // or single-stack centering
+        } else if config.pad && view_count <= config.main {
             if config.tile == TileType::Left || config.tile == TileType::Right {
                 let center = (usable_width * config.ratio) / 100;
                 let pad = (usable_width - center) / 2;
@@ -115,18 +119,9 @@ impl Layout for FilTile {
 
                 tile = Box::new(Padded::new(tile, 0, pad as i32));
             }
-        }
 
-        // then the monocle layout
-        if config.monocle {
-            tile = Box::new(Monocle::new(tile));
-        }
-
-        // finally, smart gaps
-        if (view_count == 1 || config.monocle)
-            && (config.smart_h.is_some() || config.smart_v.is_some())
-            && !config.pad
-        {
+        // or, smart gaps
+        } else if view_count == 1 && (config.smart_h.is_some() || config.smart_v.is_some()) {
             let existing = (config.inner + config.outer) as i32;
 
             let transform = |i: Option<u32>| i.map(|i| i as i32).unwrap_or(existing) - existing;
