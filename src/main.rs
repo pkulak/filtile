@@ -95,6 +95,13 @@ impl Layout for FilTile {
             config.main,
         ));
 
+        let mut name = match config.tile {
+            TileType::Left => "←",
+            TileType::Top => "↑",
+            TileType::Right => "→",
+            TileType::Bottom => "↓",
+        };
+
         let mut tile = match config.tile {
             TileType::Left => base,
             TileType::Top => rotate(base),
@@ -105,6 +112,7 @@ impl Layout for FilTile {
         // monocle
         if config.monocle {
             tile = Box::new(Monocle::new(tile));
+            name = "M";
 
         // or single-stack centering
         } else if config.pad && view_count <= config.main {
@@ -133,7 +141,7 @@ impl Layout for FilTile {
         }
 
         let mut layout = GeneratedLayout {
-            layout_name: "[]=".to_string(),
+            layout_name: name.to_string(),
             views: Vec::with_capacity(view_count as usize),
         };
 
