@@ -112,7 +112,7 @@ impl Layout for FilTile {
         // monocle
         if config.monocle {
             tile = Box::new(Monocle::new(tile));
-            name = "M";
+            name = "◎";
 
         // or single-stack centering
         } else if config.pad && view_count <= config.main {
