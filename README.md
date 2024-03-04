@@ -1,8 +1,14 @@
 # Filtile
 
 This is a layout manager for the [River](https://github.com/riverwm/river) window
-manager. It's (nearly) a drop-in replacement for `rivertile`, but with a few things
+manager. It's a drop-in replacement for `rivertile`, but with a few things
 added and configuration per tag/output.
+
+## Getting Started
+
+After you install, you can simply replace all instances of `rivertile` with
+`filtile` in your config to keep everything the same (but switch to per-tag
+configuration). If you want more than that, keep reading.
 
 ## Usage
 

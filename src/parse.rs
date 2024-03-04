@@ -36,6 +36,16 @@ pub fn parse_tags(cmd: &str) -> Option<u32> {
 
 pub fn parse_command(cmd: &str) -> Command {
     let parts: Vec<&str> = cmd.split(' ').collect();
+
+    // check for a Rivertile command
+    if parts.len() == 2 {
+        let command = parse_rivertile_command(parts[0], parts[1]);
+
+        if command != Command::Invalid {
+            return command;
+        }
+    }
+
     let parts = remove_options(&parts);
 
     if parts.len() == 1 {
@@ -58,7 +68,13 @@ pub fn parse_command(cmd: &str) -> Command {
 
         let value: u32 = match value.parse() {
             Ok(v) => v,
-            Err(_) => return Command::Textual { namespace, value },
+            Err(_) => {
+                if let Ok(v) = value.parse::<f32>() {
+                    (v * 100.0) as u32
+                } else {
+                    return Command::Textual { namespace, value };
+                }
+            }
         };
 
         return Command::Numeric {
@@ -71,9 +87,84 @@ pub fn parse_command(cmd: &str) -> Command {
     Command::Invalid
 }
 
+fn parse_rivertile_command<'a>(cmd: &'a str, value: &'a str) -> Command<'a> {
+    let v = if cmd == "-main-ratio" {
+        if let Ok(v) = value.parse::<f32>() {
+            (v * 100.0) as u32
+        } else {
+            return Command::Invalid;
+        }
+    } else if cmd == "-main-location" {
+        0
+    } else if let Ok(v) = value.parse::<u32>() {
+        v
+    } else {
+        return Command::Invalid;
+    };
+
+    match cmd {
+        "-view-padding" => Command::Numeric {
+            namespace: "view-padding",
+            operation: Operation::Set,
+            value: v,
+        },
+        "-outer-padding" => Command::Numeric {
+            namespace: "outer-padding",
+            operation: Operation::Set,
+            value: v,
+        },
+        "-main-location" => Command::Textual {
+            namespace: "main-location",
+            value,
+        },
+        "-main-count" => Command::Numeric {
+            namespace: "main-count",
+            operation: Operation::Set,
+            value: v,
+        },
+        "-main-ratio" => Command::Numeric {
+            namespace: "main-ratio",
+            operation: Operation::Set,
+            value: v,
+        },
+        _ => Command::Invalid,
+    }
+}
+
 // rip the first command off a string, leave the rest alone
 pub fn split_commands(cmd: &str) -> (&str, Option<&str>) {
-    let parts: Vec<&str> = cmd.splitn(2, ',').collect();
+    let cmd = cmd.trim();
+
+    // check for Rivertile
+    let parts: Vec<&str> = if cmd.starts_with('-') && !cmd.starts_with("--") {
+        // split at the second whitespace
+        let mut lookback = ' ';
+        let mut split = 0;
+        let mut found = false;
+
+        for (i, c) in cmd.chars().enumerate() {
+            if c == ' ' && lookback != ' ' {
+                if split != 0 {
+                    split = i;
+                    found = true;
+                    break;
+                }
+
+                split = i;
+            }
+
+            lookback = c;
+        }
+
+        if found {
+            let (car, cdr) = cmd.split_at(split);
+            vec![car, cdr]
+        } else {
+            vec![cmd]
+        }
+    } else {
+        cmd.splitn(2, ',').collect()
+    };
 
     let car = parts[0];
 
@@ -126,7 +217,7 @@ fn remove_options<'a>(parts: &[&'a str]) -> Vec<&'a str> {
 mod tests {
     use crate::parse::{Command, Operation};
 
-    use super::{parse_command, parse_output, parse_tags, split_commands};
+    use super::*;
 
     #[test]
     fn it_splits_commands() {
@@ -139,6 +230,16 @@ mod tests {
 
         assert_eq!(car, "first");
         assert_eq!(cdr, Some("and the second, third"));
+
+        let (car, cdr) = split_commands("-some-command 47 then some more stuff");
+
+        assert_eq!(car, "-some-command 47");
+        assert_eq!(cdr, Some("then some more stuff"));
+
+        let (car, cdr) = split_commands("-some-command 47");
+
+        assert_eq!(car, "-some-command 47");
+        assert_eq!(cdr, None);
     }
 
     #[test]
@@ -223,6 +324,19 @@ mod tests {
             }
             _ => panic!("parser fail"),
         };
+
+        match parse_command("main-ratio 0.75") {
+            Command::Numeric {
+                namespace: ns,
+                operation: op,
+                value: v,
+            } => {
+                assert_eq!("main-ratio", ns);
+                assert_eq!(Operation::Set, op);
+                assert_eq!(75, v);
+            }
+            _ => panic!("parser fail"),
+        };
     }
 
     #[test]
@@ -237,5 +351,32 @@ mod tests {
             }
             _ => panic!("parser fail"),
         };
+    }
+
+    #[test]
+    fn it_parses_rivertile_commands() {
+        match parse_command("-main-location right") {
+            Command::Textual {
+                namespace: ns,
+                value: v,
+            } => {
+                assert_eq!("main-location", ns);
+                assert_eq!("right", v);
+            }
+            _ => panic!("parser fail"),
+        }
+
+        match parse_command("-main-ratio 0.6") {
+            Command::Numeric {
+                namespace: ns,
+                operation: op,
+                value: v,
+            } => {
+                assert_eq!("main-ratio", ns);
+                assert_eq!(Operation::Set, op);
+                assert_eq!(60, v);
+            }
+            _ => panic!("parser fail"),
+        }
     }
 }
