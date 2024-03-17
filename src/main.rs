@@ -8,6 +8,8 @@ use river_layout_toolkit::{run, GeneratedLayout, Layout, Rectangle};
 use std::{convert::Infallible, env, iter};
 use tile::{flip, rotate, LeftPrimary, Monocle, Padded, Params, Tile, TileType};
 
+use crate::parse::AllOrOne;
+
 fn main() {
     let mut layout = FilTile {
         tag_log: TagLog::new(),
@@ -52,12 +54,18 @@ impl Layout for FilTile {
         let (cmd, cdr) = split_commands(&cmd);
 
         let tags = match parse_tags(cmd) {
-            Some(t) => Some(t),
+            Some(t) => match t {
+                AllOrOne::One(i) => Some(i),
+                AllOrOne::All => None,
+            },
             None => self.tag_log.last_tag,
         };
 
         let output = match parse_output(cmd) {
-            Some(o) => Some(o),
+            Some(o) => match o {
+                AllOrOne::One(s) => Some(s),
+                AllOrOne::All => None,
+            },
             None => output,
         };
 

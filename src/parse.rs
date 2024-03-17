@@ -20,17 +20,32 @@ pub enum Operation {
     Set,
 }
 
-pub fn parse_output(cmd: &str) -> Option<&str> {
-    find_option("--output", cmd)
+#[derive(PartialEq, Debug)]
+pub enum AllOrOne<T> {
+    All,
+    One(T),
 }
 
-pub fn parse_tags(cmd: &str) -> Option<u32> {
-    let tags = find_option("--tags", cmd);
+pub fn parse_output(cmd: &str) -> Option<AllOrOne<&str>> {
+    match find_option("--output", cmd) {
+        Some(s) => match s {
+            "all" => Some(AllOrOne::All),
+            _ => Some(AllOrOne::One(s)),
+        },
+        None => None,
+    }
+}
 
-    match tags {
-        Some("all") => Some(0),
-        Some(i) => i.parse::<u32>().ok(),
-        _ => Option::None,
+pub fn parse_tags(cmd: &str) -> Option<AllOrOne<u32>> {
+    match find_option("--tags", cmd) {
+        Some(s) => match s {
+            "all" => Some(AllOrOne::All),
+            _ => match s.parse::<u32>() {
+                Ok(i) => Some(AllOrOne::One(i)),
+                _ => None,
+            },
+        },
+        None => None,
     }
 }
 
@@ -269,17 +284,22 @@ mod tests {
     #[test]
     fn it_parses_options() {
         match parse_output("--output HD1 flip") {
-            Some(o) => assert_eq!("HD1", o),
+            Some(o) => assert_eq!(AllOrOne::One("HD1"), o),
+            _ => panic!("parser fail"),
+        }
+
+        match parse_output("--output all flip") {
+            Some(o) => assert_eq!(AllOrOne::All, o),
             _ => panic!("parser fail"),
         }
 
         match parse_tags("flip --tags all") {
-            Some(t) => assert_eq!(0, t),
+            Some(t) => assert_eq!(AllOrOne::All, t),
             _ => panic!("parser fail"),
         }
 
         match parse_tags("flip --tags 32") {
-            Some(t) => assert_eq!(32, t),
+            Some(t) => assert_eq!(AllOrOne::One(32), t),
             _ => panic!("parser fail"),
         }
     }
