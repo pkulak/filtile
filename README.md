@@ -102,35 +102,5 @@ You can install from source by cloning the repo and running:
 
     cargo install
 
-Or, if you run NixOS, you can do something like the following:
-
-```nix
-{
-  inputs = {
-    filtile.url = "github:pkulak/filtile";
-  };
-  outputs =
-    inputs@{ self
-    , nixpkgs-unstable
-    , ...
-    }:
-    let
-      overlays = {
-        unstable = _: prev: {
-          unstable = import nixpkgs-unstable
-            {
-              inherit (prev.stdenv) system;
-            } // {
-            filtile = inputs.filtile.packages.${prev.stdenv.system}.filtile;
-          };
-        };
-      };
-    in
-    {
-      <snip>;
-      packages = with pkgs; [
-        unstable.filtile
-      ];
-    }
-}
-```
+Or, if you run NixOS, you can [install from NixPkgs](https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=river-filtile)
+(`river-filtile`).
