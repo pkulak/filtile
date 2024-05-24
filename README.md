@@ -53,6 +53,10 @@ Following are the commands that can be sent to `riverctl send-layout-cmd filtile
     <dd>A different way to think about the main ratio. "move-split-right", for
         example, will make the main-ratio larger when the main-location is
         left, smaller when it's right, and is a no op for top and bottom.</dd>
+    <dt>diminish [0-100]</dt>
+    <dd>How much to "diminish" successive windows on the stack. 0 means not
+        at all (every window is the same size), and 100 means that each new
+        window is one quarter the size of the preceding.</dd>
 </dl>
 
 All commands can be prefaced with one or both of the following options. Either
@@ -71,11 +75,20 @@ as shown below.
 ## Examples
 
 ```bash
+riverctl map normal Super Z send-layout-cmd filtile "flip"
+riverctl map normal Super C send-layout-cmd filtile "pad"
+
+riverctl map normal Super F send-layout-cmd filtile "monocle"
+
+# Move the split locations around
 riverctl map normal Super LEFT send-layout-cmd filtile "move-split-left 5"
 riverctl map normal Super RIGHT send-layout-cmd filtile "move-split-right 5"
 
-riverctl map normal Super Z send-layout-cmd filtile "flip"
-riverctl map normal Super C send-layout-cmd filtile "pad"
+riverctl map normal Super UP send-layout-cmd filtile "diminish -20"
+riverctl map normal Super DOWN send-layout-cmd filtile "diminish +20"
+
+riverctl map normal Super+Shift UP send-layout-cmd filtile "diminish -200"
+riverctl map normal Super+Shift DOWN send-layout-cmd filtile "diminish +200"
 
 # Set the default layout generator to be filtile and start it.
 riverctl default-layout filtile

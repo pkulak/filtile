@@ -81,15 +81,17 @@ pub struct LeftPrimary {
     outer: u32,
     ratio: u32,
     main: u32,
+    dim: i32,
 }
 
 impl LeftPrimary {
-    pub fn new(inner: u32, outer: u32, ratio: u32, main: u32) -> LeftPrimary {
+    pub fn new(inner: u32, outer: u32, ratio: u32, main: u32, dim: i32) -> LeftPrimary {
         LeftPrimary {
             inner,
             outer,
             ratio,
             main,
+            dim,
         }
     }
 
@@ -97,9 +99,44 @@ impl LeftPrimary {
         (usable_width * self.ratio) / 100
     }
 
+    fn subtract_gaps(&self, count: u32, params: &Params) -> u32 {
+        params.usable_height - (self.inner * count * 2) - self.outer * 2
+    }
+
     fn get_height(&self, count: u32, params: &Params) -> u32 {
-        let minus_gaps = params.usable_height - (self.inner * count * 2) - self.outer * 2;
-        minus_gaps / count
+        self.subtract_gaps(count, params) / count
+    }
+
+    fn get_diminished_height(&self, index: u32, count: u32, params: &Params) -> u32 {
+        if self.dim == 0 || count == 1 {
+            return self.get_height(count, params);
+        };
+
+        let total = self.subtract_gaps(count, params);
+        let stolen = (total * self.dim.unsigned_abs()) / 100;
+        let base = (total - stolen) / count;
+
+        if self.dim > 0 {
+            base + LeftPrimary::diminish(stolen, count - index - 1, count)
+        } else {
+            base + LeftPrimary::diminish(stolen, index, count)
+        }
+    }
+
+    // find the nth term in 1x + 4x + 16x + 64x ... = 1
+    fn diminish(size: u32, index: u32, total: u32) -> u32 {
+        // there can be some rounding error in here; compensate in the last element
+        if index == total - 1 {
+            let prev_sum: u32 = (0..total - 1).map(|i| Self::diminish(size, i, total)).sum();
+            return size - prev_sum;
+        }
+
+        let total_parts = ((4_u32.pow(total) - 1) / (4 - 1)) as f32; // how many Xs are there?
+        let x = 1_f32 / total_parts;
+        let n = 4_u32.pow(index) as f32;
+        let ratio = n * x;
+
+        ((size as f32) * ratio).round() as u32
     }
 }
 
@@ -136,8 +173,12 @@ impl Tile for LeftPrimary {
     }
 
     fn get_stack_y(&self, params: &Params, index: u32) -> i32 {
-        let height = self.get_stack_height(params, index);
-        let y = self.outer + self.inner + (index - self.main) * (self.inner * 2 + height);
+        let mut y = self.outer + self.inner;
+
+        for i in self.main..index {
+            y += self.get_stack_height(params, i);
+            y += self.inner * 2;
+        }
 
         y as i32
     }
@@ -146,8 +187,8 @@ impl Tile for LeftPrimary {
         (params.usable_width - self.get_center(params.usable_width)) - self.inner * 2 - self.outer
     }
 
-    fn get_stack_height(&self, params: &Params, _index: u32) -> u32 {
-        self.get_height(params.view_count - self.main, params)
+    fn get_stack_height(&self, params: &Params, index: u32) -> u32 {
+        self.get_diminished_height(index - self.main, params.view_count - self.main, params)
     }
 }
 
@@ -399,5 +440,20 @@ impl Tile for Monocle {
     fn get_stack_height(&self, params: &Params, _: u32) -> u32 {
         self.wrapped
             .get_primary_height(&params.with_view_count(1), 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_diminishes() {
+        assert_eq!(
+            (0..5)
+                .map(|i| LeftPrimary::diminish(1000, i, 5))
+                .sum::<u32>(),
+            1000
+        );
     }
 }

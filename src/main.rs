@@ -101,6 +101,7 @@ impl Layout for FilTile {
             config.outer,
             config.ratio,
             config.main,
+            config.dim,
         ));
 
         let mut name = match config.tile {

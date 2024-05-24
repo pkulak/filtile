@@ -14,6 +14,7 @@ enum ConfigValue {
     Monocle(bool),
     SmartH(Option<u32>),
     SmartV(Option<u32>),
+    Dim(i32),
 }
 
 #[derive(PartialEq)]
@@ -51,6 +52,7 @@ impl ConfigStorage {
                     ConfigValue::Monocle(v) => config.monocle = v,
                     ConfigValue::SmartH(v) => config.smart_h = v,
                     ConfigValue::SmartV(v) => config.smart_v = v,
+                    ConfigValue::Dim(v) => config.dim = v,
                 }
             }
         }
@@ -109,6 +111,10 @@ impl ConfigStorage {
 
         if existing.smart_v != config.smart_v {
             self.add(make_entry(ConfigValue::SmartV(config.smart_v)));
+        }
+
+        if existing.dim != config.dim {
+            self.add(make_entry(ConfigValue::Dim(config.dim)));
         }
     }
 
@@ -282,6 +288,15 @@ impl ConfigStorage {
                 Operation::Subtract => config.dec_main(value),
                 Operation::Set => config.set_main(value),
             },
+            Command::Numeric {
+                namespace: "diminish",
+                operation,
+                value,
+            } => match operation {
+                Operation::Add => config.inc_dim(value),
+                Operation::Subtract => config.dec_dim(value),
+                Operation::Set => config.set_dim(value),
+            },
             _ => println!("invalid command {}", cmd),
         };
 
@@ -300,6 +315,7 @@ pub struct Config {
     pub monocle: bool,
     pub smart_h: Option<u32>,
     pub smart_v: Option<u32>,
+    pub dim: i32,
 }
 
 impl Config {
@@ -314,6 +330,7 @@ impl Config {
             monocle: false,
             smart_h: None,
             smart_v: None,
+            dim: 0,
         }
     }
 
@@ -324,7 +341,25 @@ impl Config {
         existing + value
     }
 
+    fn ranged_iinc(existing: i32, value: u32, max: i32) -> i32 {
+        let value = value as i32;
+
+        if existing + value > max {
+            return max;
+        }
+        existing + value
+    }
+
     fn ranged_dec(existing: u32, value: u32, min: u32) -> u32 {
+        if value > existing - min {
+            return min;
+        }
+        existing - value
+    }
+
+    fn ranged_idec(existing: i32, value: u32, min: i32) -> i32 {
+        let value = value as i32;
+
         if value > existing - min {
             return min;
         }
@@ -373,6 +408,10 @@ impl Config {
         self.main = Config::ranged_inc(self.main, value, 16);
     }
 
+    pub fn inc_dim(&mut self, value: u32) {
+        self.dim = Config::ranged_iinc(self.dim, value, 100);
+    }
+
     pub fn dec_inner(&mut self, value: u32) {
         self.inner = Config::ranged_dec(self.inner, value, 0);
     }
@@ -403,6 +442,10 @@ impl Config {
         self.main = Config::ranged_dec(self.main, value, 1);
     }
 
+    pub fn dec_dim(&mut self, value: u32) {
+        self.dim = Config::ranged_idec(self.dim, value, -100);
+    }
+
     pub fn set_inner(&mut self, value: u32) {
         self.inner = Config::ranged_set(value, 0, 1024);
     }
@@ -425,6 +468,10 @@ impl Config {
 
     pub fn set_main(&mut self, value: u32) {
         self.main = Config::ranged_set(value, 1, 16);
+    }
+
+    pub fn set_dim(&mut self, value: u32) {
+        self.dim = Config::ranged_set(value, 0, 100) as i32;
     }
 }
 
