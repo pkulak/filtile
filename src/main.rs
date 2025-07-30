@@ -11,12 +11,18 @@ use tile::{flip, rotate, LeftPrimary, Monocle, Padded, Params, Tile, TileType};
 use crate::parse::AllOrOne;
 
 fn main() {
+    let all_args: Vec<String> = env::args().collect();
+
+    if all_args.len() > 1 && (all_args[1] == "-version" || all_args[1] == "--version") {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     let mut layout = FilTile {
         tag_log: TagLog::new(),
         configs: ConfigStorage::new(),
     };
 
-    let all_args: Vec<String> = env::args().collect();
     let call_string = all_args[1..].join(" ").trim().to_string();
 
     if !call_string.is_empty() {
